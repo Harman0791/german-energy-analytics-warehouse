@@ -61,3 +61,8 @@ This makes energy data ideal for building a realistic analytics pipeline.
                                ▼
                      Prefect Orchestration
 
+⭐ Pipeline Run (Prefect)
+
+The full pipeline (ingestion → dbt → forecasting → analytics) runs as one Prefect flow:
+
+![Successful Prefect pipeline run](docs/images/prefect_pipeline_run.jpg)
