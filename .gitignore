@@ -1,0 +1,19 @@
+# secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# dbt (generated on every run)
+target/
+dbt_packages/
+logs/
+
+# raw data (downloaded by the pipeline, not stored in Git)
+data/raw/
+
+# editor
+.vscode/
