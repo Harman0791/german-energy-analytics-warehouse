@@ -7,7 +7,6 @@ WITH enriched AS (
         italy,
         belgium,
         spain,
-        uk,
         AVG(france)  OVER (
             ORDER BY date, hour_of_day
             ROWS BETWEEN 23 PRECEDING AND CURRENT ROW

@@ -24,6 +24,3 @@ models:
       - name: avg_spain
         tests:
           - not_null
-      - name: avg_uk
-        tests:
-         - not_null

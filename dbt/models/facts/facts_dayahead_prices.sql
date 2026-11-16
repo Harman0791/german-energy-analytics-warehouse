@@ -1,12 +1,5 @@
-WITH dedup AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY date, hour_of_day
-            ORDER BY date
-        ) AS rn
-    FROM {{ ref('stg_entsoe_dayahead_prices') }}
-)
+-- Fact table: one row per date and hour with prices per country.
+-- Duplicates (DST) are already resolved in staging.
 
 SELECT
     date,
@@ -19,7 +12,5 @@ SELECT
     italy,
     belgium,
     spain,
-    uk,
     germany
-FROM dedup
-WHERE rn = 1
+FROM {{ ref('stg_entsoe_dayahead_prices') }}

@@ -17,13 +17,13 @@ engine = sa.create_engine(
 
 def calc():
     df = pd.read_sql("""
-        SELECT date, hour_of_day, france, germany, belgium, italy, spain, uk,
+        SELECT date, hour_of_day, france, germany, belgium, italy, spain,
                france_prev, germany_prev
         FROM hourly_price_trends
         ORDER BY date, hour_of_day
     """, engine)
 
-    numeric_cols = ["france", "germany", "belgium", "italy", "spain", "uk",
+    numeric_cols = ["france", "germany", "belgium", "italy", "spain",
                     "france_prev", "germany_prev"]
 
     vol = df.groupby("hour_of_day")[numeric_cols].std().reset_index()

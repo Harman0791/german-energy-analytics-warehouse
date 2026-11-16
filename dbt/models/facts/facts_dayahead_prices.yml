@@ -39,7 +39,3 @@ models:
       - name: spain
         tests:
           - not_null
-
-      - name: uk
-        tests:
-          - not_null

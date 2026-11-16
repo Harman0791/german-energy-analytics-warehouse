@@ -6,8 +6,7 @@ WITH base AS (
         germany,
         italy,
         belgium,
-        spain,
-        uk
+        spain
     FROM {{ ref('facts_dayahead_prices') }}
 )
 
@@ -33,10 +32,6 @@ SELECT
     AVG(spain)   OVER (
         ORDER BY date, hour_of_day
         ROWS BETWEEN 23 PRECEDING AND CURRENT ROW
-    ) AS spain_ra_24h,
-    AVG(uk)      OVER (
-        ORDER BY date, hour_of_day
-        ROWS BETWEEN 23 PRECEDING AND CURRENT ROW
-    ) AS uk_ra_24h
+    ) AS spain_ra_24h
 FROM base
 ORDER BY date, hour_of_day

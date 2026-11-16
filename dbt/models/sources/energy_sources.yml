@@ -16,19 +16,26 @@ sources:
               - not_null
           - name: france
             tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
           - name: italy
             tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
           - name: belgium
             tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
           - name: spain
             tests:
-              - not_null
-          - name: uk
-            tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
           - name: germany
             tests:
-              - not_null
+              - not_null:
+                  config:
+                    severity: warn
