@@ -1,7 +1,0 @@
-Libraries
-pandas
-numpy
-matplotlib
-seaborn
-requests
-
