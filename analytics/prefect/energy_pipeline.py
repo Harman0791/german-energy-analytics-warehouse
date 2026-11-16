@@ -21,7 +21,7 @@ def forecast_france():
 
 @task
 def forecast_spain():
-    subprocess.run(["python","analytics/forecasting/spain_holt_winter_forcasts.py"],check=True)
+    subprocess.run(["python","analytics/forecasting/spain_holt_winter_forecasts.py"],check=True)
 
 @task
 def seasonality():
