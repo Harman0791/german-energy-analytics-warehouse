@@ -1,9 +1,11 @@
 import os
 import pandas as pd
 import sqlalchemy as sa
+import argparse
 from dotenv import load_dotenv
 from entsoe import EntsoePandasClient
 from fetch_entsoe import fetch_prices
+
 
 load_dotenv()
 
@@ -44,7 +46,7 @@ def load_zone(engine, df, zone, start, end):
         df.to_sql("raw_dayahead_prices", conn, if_exists="append", index=False)
 
 
-def ingest():
+def ingest(full=False):
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(sa.text(CREATE_TABLE))
@@ -54,11 +56,14 @@ def ingest():
         timeout=60,        # give up on a request after 60 seconds
         retry_count=3,     # then try again, up to 3 times
         retry_delay=10,    # wait 10 seconds between tries
-    )
+    )  
+
     end = pd.Timestamp.now(tz="Europe/Berlin").normalize()  # today 00:00 -> data until yesterday
+    start = START if full else end - pd.DateOffset(days=7)
+    print(f"Mode: {'full' if full else 'incremental'}, loading from {start.date()}", flush=True)
 
     for zone in ZONES:
-        chunk_start = START
+        chunk_start = start
         while chunk_start < end:
             # Load one month at a time
             chunk_end = min(chunk_start + pd.DateOffset(months=1), end)
@@ -72,4 +77,8 @@ def ingest():
 
 
 if __name__ == "__main__":
-    ingest()
+    parser = argparse.ArgumentParser(description="Load ENTSO-E day-ahead prices")
+    parser.add_argument("--full", action="store_true",
+                        help="reload all data since 2023 instead of the last 7 days")
+    args = parser.parse_args()
+    ingest(full=args.full)
