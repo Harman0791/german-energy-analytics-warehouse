@@ -17,7 +17,7 @@ def fetch_prices(client, zone, start, end):
     prices.index = prices.index.tz_convert("UTC")
 
     # 3. 15-minute prices (since Oct 2025) -> hourly average
-    prices = prices.resample("1h").mean()
+    prices = prices.resample("1h").mean().round(4)
 
     df = prices.to_frame("price_eur_mwh")
     df.index.name = "timestamp_utc"
@@ -40,4 +40,11 @@ if __name__ == "__main__":
                       pd.Timestamp("2025-10-25", tz="Europe/Berlin"),
                       pd.Timestamp("2025-10-27", tz="Europe/Berlin"))
     print("Test 2 rows:", len(df), "(expected 49)")
+     # Test 3: the 31 Dec gap
+    raw = client.query_day_ahead_prices(
+        "DE_LU",
+        start=pd.Timestamp("2023-12-30", tz="Europe/Berlin"),
+        end=pd.Timestamp("2024-01-02", tz="Europe/Berlin"),
+    )
+    print(raw["2023-12-30 22:00":"2023-12-31 02:00"])
     print(df.head())
