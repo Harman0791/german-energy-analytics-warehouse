@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: fct_dayahead_prices
+    description: "Hourly day-ahead prices. Grain: one row per timestamp_utc and bidding_zone."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - timestamp_utc
+              - bidding_zone
+    columns:
+      - name: bidding_zone
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: bidding_zone
+      - name: date_local
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date
+      - name: price_eur_mwh
+        tests:
+          - not_null
