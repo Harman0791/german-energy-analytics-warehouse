@@ -39,3 +39,27 @@ sources:
               - not_null:
                   config:
                     severity: warn
+
+      - name: raw_dayahead_prices
+        description: "Hourly day-ahead prices from the ENTSO-E API (UTC), loaded by analytics/ingestion/ingest_data.py"
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              arguments:
+                combination_of_columns:
+                  - timestamp_utc
+                  - bidding_zone
+        columns:
+          - name: timestamp_utc
+            tests:
+              - not_null
+          - name: bidding_zone
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['DE_LU', 'FR', 'ES', 'BE']
+          - name: price_eur_mwh
+            tests:
+              - not_null:
+                  config:
+                    severity: warn
