@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: int_prices_hourly_wide
+    description: "Hourly prices with one column per country. Grain: one row per timestamp_utc."
+    columns:
+      - name: timestamp_utc
+        tests:
+          - unique
+          - not_null
+      - name: germany
+        tests:
+          - not_null
+      - name: france
+        tests:
+          - not_null
+      - name: spain
+        tests:
+          - not_null
+      - name: belgium
+        tests:
+          - not_null
