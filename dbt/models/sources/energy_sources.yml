@@ -5,41 +5,6 @@ sources:
     description: "RAW ENTSO-E day-ahead electricity price data."
     schema: public
     tables:
-      - name: entsoe_dayahead_prices
-        description: "RAW hourly day-ahead electricity prices for multiple europen countries"
-        columns:
-          - name: date
-            tests:
-              - not_null
-          - name: hour
-            tests:
-              - not_null
-          - name: france
-            tests:
-              - not_null:
-                  config:
-                    severity: warn
-          - name: italy
-            tests:
-              - not_null:
-                  config:
-                    severity: warn
-          - name: belgium
-            tests:
-              - not_null:
-                  config:
-                    severity: warn
-          - name: spain
-            tests:
-              - not_null:
-                  config:
-                    severity: warn
-          - name: germany
-            tests:
-              - not_null:
-                  config:
-                    severity: warn
-
       - name: raw_dayahead_prices
         description: "Hourly day-ahead prices from the ENTSO-E API (UTC), loaded by analytics/ingestion/ingest_data.py"
         tests:
