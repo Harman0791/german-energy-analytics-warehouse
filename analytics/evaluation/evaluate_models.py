@@ -63,10 +63,10 @@ actuals = pd.read_sql(
     engine
 )
 
-# 2. Load forecasts from views (already pointing to the right tables)
-germany_fc = pd.read_sql("SELECT * FROM forecast_germany", engine)
-france_fc  = pd.read_sql("SELECT * FROM forecast_france", engine)
-spain_fc   = pd.read_sql("SELECT * FROM forecast_spain", engine)
+# 2. Load forecasts (tables written by load_forecasts_to_db.py)
+germany_fc = pd.read_sql("SELECT * FROM germany_price_forecast", engine)
+france_fc  = pd.read_sql("SELECT * FROM france_price_forecast", engine)
+spain_fc   = pd.read_sql("SELECT * FROM spain_price_forecast", engine)
 
 results = []
 

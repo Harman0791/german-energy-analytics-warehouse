@@ -35,7 +35,7 @@ def run_stl(country, column):
         "residual": result.resid
     })
 
-    components.to_sql(f"{country}_seasonality", engine, if_exists="append", index=False)
+    components.to_sql(f"{country}_seasonality", engine, if_exists="replace", index=False)
     print(f"{country.capitalize()} seasonality saved.")
 
 def main():

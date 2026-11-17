@@ -51,11 +51,12 @@ def energy_pipeline():
     forecast_germany()
     forecast_france()
     forecast_spain()
+    load_to_postgres()
     seasonality()
     anomalies()
     volatility()
     evaluation()
-    load_to_postgres()
+    
 
 #-----ENTRY POINT------#
 if __name__ == "__main__":
