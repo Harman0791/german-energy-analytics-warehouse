@@ -1,88 +1,112 @@
-import pandas as pd
-from dotenv import load_dotenv
 import os
-import sqlalchemy as sa
 import numpy as np
+import pandas as pd
+import sqlalchemy as sa
+from dotenv import load_dotenv
+from prophet import Prophet
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
-load_dotenv()  # loads .env file
+load_dotenv()
 
-user = os.getenv("POSTGRES_USER")
-password = os.getenv("POSTGRES_PASSWORD")
-db = os.getenv("POSTGRES_DB")
-host = os.getenv("POSTGRES_HOST")
-port = os.getenv("POSTGRES_PORT")
+HORIZON = 30  # days held back for testing
+COUNTRIES = {"germany": "avg_germany", "france": "avg_france", "spain": "avg_spain"}
 
-engine = sa.create_engine(
-    f"postgresql://{user}:{password}@{host}:{port}/{db}"
-)
 
-def evaluate(actual_df, forecast_df, actual_col):
-    # Detect merge key
-    merge_key = "ds" if "ds" in forecast_df.columns else "date"
+def get_engine():
+    user = os.getenv("POSTGRES_USER")
+    password = os.getenv("POSTGRES_PASSWORD")
+    db = os.getenv("POSTGRES_DB")
+    host = os.getenv("POSTGRES_HOST")
+    port = os.getenv("POSTGRES_PORT")
+    return sa.create_engine(f"postgresql://{user}:{password}@{host}:{port}/{db}")
 
-    # Normalize date formats
-    actual_df["date"] = pd.to_datetime(actual_df["date"]).dt.date
-    forecast_df[merge_key] = pd.to_datetime(forecast_df[merge_key]).dt.date
 
-    # Restrict actuals to forecast range
-    min_date = forecast_df[merge_key].min()
-    max_date = forecast_df[merge_key].max()
+# ---------- Models: each takes the training series, returns `h` predictions ----------
 
-    actual_df = actual_df[
-        (actual_df["date"] >= min_date) &
-        (actual_df["date"] <= max_date)
-    ]
+def forecast_prophet(train, h):
+    df = pd.DataFrame({"ds": train.index, "y": train.values})
+    model = Prophet(daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=True)
+    model.fit(df)
+    future = model.make_future_dataframe(periods=h, include_history=False)
+    return model.predict(future)["yhat"].values
 
-    # Merge
-    df = pd.merge(
-        actual_df,
-        forecast_df,
-        left_on="date",
-        right_on=merge_key,
-        how="inner"
-    )
 
-    print(f"Merged rows for {actual_col}: {len(df)}")
+def forecast_arima(train, h):
+    return ARIMA(train.values, order=(5, 1, 2)).fit().forecast(h)
 
-    if len(df) == 0:
-        return np.nan, np.nan, np.nan
 
-    actual = df[actual_col]
-    pred = df["forecast"]
+def forecast_holt_winters(train, h):
+    model = ExponentialSmoothing(train.values, trend="add", seasonal="add", seasonal_periods=7)
+    return model.fit().forecast(h)
 
-    mae = np.mean(np.abs(actual - pred))
-    rmse = np.sqrt(np.mean((actual - pred)**2))
-    mape = np.mean(np.abs((actual - pred) / actual)) * 100
 
-    return mae, rmse, mape
+def forecast_seasonal_naive(train, h):
+    # Baseline: repeat the last 7 days
+    return np.resize(train.values[-7:], h)
 
-    
-# 1. Load actuals
-actuals = pd.read_sql(
-    "SELECT date, avg_germany, avg_france, avg_spain FROM daily_average_prices",
-    engine
-)
 
-# 2. Load forecasts (tables written by load_forecasts_to_db.py)
-germany_fc = pd.read_sql("SELECT * FROM germany_price_forecast", engine)
-france_fc  = pd.read_sql("SELECT * FROM france_price_forecast", engine)
-spain_fc   = pd.read_sql("SELECT * FROM spain_price_forecast", engine)
+MODELS = {
+    "prophet": forecast_prophet,
+    "arima": forecast_arima,
+    "holt_winters": forecast_holt_winters,
+    "seasonal_naive": forecast_seasonal_naive,
+}
 
-results = []
 
-# Germany
-mae, rmse, mape = evaluate(actuals, germany_fc, "avg_germany")
-results.append(["Germany", mae, rmse, mape])
+# ---------- Metrics ----------
 
-# France
-mae, rmse, mape = evaluate(actuals, france_fc, "avg_france")
-results.append(["France", mae, rmse, mape])
+def calc_metrics(actual, pred):
+    error = actual - pred
+    return {
+        "mae": np.mean(np.abs(error)),
+        "rmse": np.sqrt(np.mean(error ** 2)),
+        "mape": np.mean(np.abs(error / actual)) * 100,
+    }
 
-# Spain
-mae, rmse, mape = evaluate(actuals, spain_fc, "avg_spain")
-results.append(["Spain", mae, rmse, mape])
 
-df_results = pd.DataFrame(results, columns=["country", "mae", "rmse", "mape"])
-df_results.to_sql("model_evaluation", engine, if_exists="replace", index=False)
+# ---------- Backtest ----------
 
-print("Model Evaluation is complete and loaded into Postgres")
+def main():
+    engine = get_engine()
+    df = pd.read_sql(
+        "SELECT date, avg_germany, avg_france, avg_spain FROM daily_average_prices ORDER BY date",
+        engine,
+        parse_dates=["date"],
+    ).set_index("date")
+
+    # Fail fast: need at least a year of training data plus the test window
+    if len(df) < 365 + HORIZON:
+        raise ValueError(f"Only {len(df)} days of data - not enough for a backtest.")
+
+    train, test = df.iloc[:-HORIZON], df.iloc[-HORIZON:]
+    print(f"Train: {train.index.min().date()} to {train.index.max().date()} ({len(train)} days)")
+    print(f"Test:  {test.index.min().date()} to {test.index.max().date()} ({len(test)} days)")
+
+    results = []
+    for country, col in COUNTRIES.items():
+        for model_name, forecast_fn in MODELS.items():
+            pred = forecast_fn(train[col], HORIZON)
+
+            # Fail fast: never save a broken result
+            if len(pred) != HORIZON or np.isnan(pred).any():
+                raise ValueError(f"{model_name} returned invalid predictions for {country}.")
+
+            results.append({
+                "country": country,
+                "model": model_name,
+                **calc_metrics(test[col].values, pred),
+                "test_start": test.index.min().date(),
+                "test_end": test.index.max().date(),
+            })
+            print(f"{country:8} {model_name:15} done")
+
+    out = pd.DataFrame(results)
+    out.to_sql("model_evaluation", engine, if_exists="replace", index=False)
+
+    print("\nMAE (EUR/MWh) - lower is better:")
+    print(out.pivot(index="model", columns="country", values="mae").round(2))
+
+
+if __name__ == "__main__":
+    main()
