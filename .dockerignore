@@ -1,0 +1,17 @@
+# secrets - never bake them into an image
+.env
+
+# git and editor
+.git
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# dbt generated (recreated inside the container)
+target/
+dbt_packages/
+logs/

@@ -2,9 +2,11 @@ import os
 import pandas as pd
 import sqlalchemy as sa
 import argparse
+import time
 from dotenv import load_dotenv
 from entsoe import EntsoePandasClient
 from fetch_entsoe import fetch_prices
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 
 
 load_dotenv()
@@ -22,13 +24,13 @@ CREATE TABLE IF NOT EXISTS raw_dayahead_prices (
 );
 """
 
+
 DELETE_RANGE = """
 DELETE FROM raw_dayahead_prices
 WHERE bidding_zone = :zone
   AND timestamp_utc >= :start
   AND timestamp_utc <  :end;
 """
-
 
 def get_engine():
     user = os.getenv("POSTGRES_USER")
@@ -45,11 +47,29 @@ def load_zone(engine, df, zone, start, end):
         conn.execute(sa.text(DELETE_RANGE), {"zone": zone, "start": start, "end": end})
         df.to_sql("raw_dayahead_prices", conn, if_exists="append", index=False)
 
+def fetch_with_retry(client, zone, start, end, attempts=5):
+    """Retry failed API calls, waiting longer after each failure (backoff)."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return fetch_prices(client, zone, start, end)
+        except (HTTPError, ConnectionError, Timeout) as error:
+            if attempt == attempts:
+                raise
+            wait = 30 * attempt
+            # Print only the error type: the full message contains the API key
+            print(f"   attempt {attempt} failed ({type(error).__name__}), "
+                  f"retrying in {wait}s ...", flush=True)
+            time.sleep(wait)
 
 def ingest(full=False):
     engine = get_engine()
     with engine.begin() as conn:
         conn.execute(sa.text(CREATE_TABLE))
+    # First run on an empty database: load the full history automatically
+    with engine.connect() as conn:
+        row_count = conn.execute(sa.text("SELECT COUNT(*) FROM raw_dayahead_prices")).scalar()
+    if row_count == 0:
+        full = True
 
     client = EntsoePandasClient(
         api_key=os.getenv("ENTSOE_API_KEY"),
@@ -69,7 +89,7 @@ def ingest(full=False):
             chunk_end = min(chunk_start + pd.DateOffset(months=1), end)
             print(f"{zone}: {chunk_start.date()} to {chunk_end.date()} ...", flush=True)
 
-            df = fetch_prices(client, zone, chunk_start, chunk_end)
+            df = fetch_with_retry(client, zone, chunk_start, chunk_end)
             load_zone(engine, df, zone, chunk_start, chunk_end)
 
             print(f"   {len(df)} rows loaded", flush=True)
