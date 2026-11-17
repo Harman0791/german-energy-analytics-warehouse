@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: dim_country
+    description: "One row per bidding zone."
+    columns:
+      - name: bidding_zone
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_date
+    description: "One row per calendar day (2023-2027)."
+    columns:
+      - name: date
+        tests:
+          - unique
+          - not_null
