@@ -1,11 +1,12 @@
-SELECT
-  date,
-  hour_of_day,
+-- Absolute hour-to-hour price change per country.
 
-  ABS(france - LAG(france) OVER (ORDER BY date, hour_of_day)) AS france_volatility,
-  ABS(germany - LAG(germany) OVER (ORDER BY date, hour_of_day)) AS germany_volatility,
-  ABS(italy - LAG(italy) OVER (ORDER BY date, hour_of_day)) AS italy_volatility,
-  ABS(belgium - LAG(belgium) OVER (ORDER BY date, hour_of_day)) AS belgium_volatility,
-  ABS(spain - LAG(spain) OVER (ORDER BY date, hour_of_day)) AS spain_volatility
-FROM {{ ref('facts_dayahead_prices')}}
-ORDER BY date, hour_of_day
+SELECT
+    timestamp_utc,
+    date,
+    hour_of_day,
+    ABS(france  - LAG(france)  OVER w) AS france_volatility,
+    ABS(germany - LAG(germany) OVER w) AS germany_volatility,
+    ABS(belgium - LAG(belgium) OVER w) AS belgium_volatility,
+    ABS(spain   - LAG(spain)   OVER w) AS spain_volatility
+FROM {{ ref('int_prices_hourly_wide') }}
+WINDOW w AS (ORDER BY timestamp_utc)

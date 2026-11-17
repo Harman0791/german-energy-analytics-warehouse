@@ -18,9 +18,6 @@ models:
       - name: avg_belgium
         tests:
           - not_null
-      - name: avg_italy
-        tests:
-          - not_null
       - name: avg_spain
         tests:
           - not_null

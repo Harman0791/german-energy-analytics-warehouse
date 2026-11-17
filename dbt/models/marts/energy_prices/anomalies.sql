@@ -1,33 +1,31 @@
+-- Flags hours where the price deviates more than 20 EUR/MWh
+-- from its 24-hour rolling average.
+
 WITH enriched AS (
+
     SELECT
+        timestamp_utc,
         date,
         hour_of_day,
         france,
         germany,
-        italy,
-        belgium,
-        spain,
-        AVG(france)  OVER (
-            ORDER BY date, hour_of_day
-            ROWS BETWEEN 23 PRECEDING AND CURRENT ROW
-        ) AS france_ra,
-        AVG(germany) OVER (
-            ORDER BY date, hour_of_day
-            ROWS BETWEEN 23 PRECEDING AND CURRENT ROW
-        ) AS germany_ra
-    FROM {{ ref('facts_dayahead_prices') }}
+        AVG(france)  OVER w AS france_ra,
+        AVG(germany) OVER w AS germany_ra
+    FROM {{ ref('int_prices_hourly_wide') }}
+    WINDOW w AS (ORDER BY timestamp_utc ROWS BETWEEN 23 PRECEDING AND CURRENT ROW)
+
 )
 
 SELECT
+    timestamp_utc,
     date,
     hour_of_day,
     france,
     france_ra,
-    (france - france_ra) AS france_deviation,
-    CASE WHEN ABS(france - france_ra) > 20 THEN TRUE ELSE FALSE END AS france_anomaly,
+    france - france_ra             AS france_deviation,
+    ABS(france - france_ra) > 20   AS france_anomaly,
     germany,
     germany_ra,
-    (germany - germany_ra) AS germany_deviation,
-    CASE WHEN ABS(germany - germany_ra) > 20 THEN TRUE ELSE FALSE END AS germany_anomaly
+    germany - germany_ra           AS germany_deviation,
+    ABS(germany - germany_ra) > 20 AS germany_anomaly
 FROM enriched
-ORDER BY date, hour_of_day

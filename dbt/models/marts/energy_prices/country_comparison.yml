@@ -15,7 +15,7 @@ models:
         tests:
           - not_null
 
-      - name: de_vs_it
+      - name: de_vs_be
         tests:
           - not_null
 
