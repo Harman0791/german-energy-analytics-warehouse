@@ -9,7 +9,8 @@ def ingest_data():
 
 @task
 def run_dbt():
-    subprocess.run(["dbt", "run"], cwd="dbt", check=True)
+    # build = seeds + models + tests, in dependency order
+    subprocess.run(["dbt", "build"], check=True)
 
 @task
 def forecast_germany():

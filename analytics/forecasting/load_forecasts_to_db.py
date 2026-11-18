@@ -40,14 +40,12 @@ def load_csv(csv_path, table_name, country):
         # Germany uses 'ds'
         df = df[["ds", "forecast"]]
 
-    with engine.begin() as conn:
-        conn.execute(sa.text(f"TRUNCATE TABLE {table_name}"))
-
+    
     df.to_sql(
         table_name,
         engine,
         schema="public",
-        if_exists="append",
+        if_exists="replace",
         index=False
     )
 
